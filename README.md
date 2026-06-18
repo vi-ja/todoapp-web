@@ -2,6 +2,12 @@
 
 A fully functional, client-side To-Do List built with HTML5, CSS3, and vanilla JavaScript (ES6). Tasks are managed in memory with a single state object, rendered dynamically to the DOM, and persisted automatically in the browser using `localStorage`.
 
+## Live Demo
+
+**App:** [https://vi-ja.github.io/todoapp-web/todo-app/](https://vi-ja.github.io/todoapp-web/todo-app/)
+
+The repo root URL redirects to the app automatically.
+
 ## Features
 
 - **Create** — Add new tasks via the Add button or Enter key
