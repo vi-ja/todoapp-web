@@ -1,35 +1,29 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Todo App</title>
-  <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Premium To-Do List</title>
+    <link rel="stylesheet" href="style.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
 </head>
 <body>
-  <main class="todo-app">
-    <h1>Todo</h1>
-    <section class="new-todo">
-      <input id="newTodoInput" type="text" placeholder="What needs to be done?" autocomplete="off">
-      <button id="addBtn">Add</button>
-    </section>
-
-    <section class="controls">
-      <div class="filters">
-        <button data-filter="all" class="filter active">All</button>
-        <button data-filter="active" class="filter">Active</button>
-        <button data-filter="completed" class="filter">Completed</button>
-      </div>
-      <button id="clearCompleted">Clear completed</button>
-    </section>
-
-    <ul id="todoList" class="todo-list" aria-live="polite"></ul>
-
-    <footer class="footer">
-      <span id="itemsLeft">0 items left</span>
-    </footer>
-  </main>
-
-  <script src="script.js"></script>
+    <main class="container">
+        <h1>My Tasks</h1>
+        <section class="input-section">
+            <input type="text" id="new-task" placeholder="What needs to be done?" autocomplete="off" aria-label="New task" />
+            <button id="add-btn" aria-label="Add task">Add</button>
+        </section>
+        <section class="filters">
+            <button class="filter-btn active" data-filter="all" aria-label="Show all tasks">All</button>
+            <button class="filter-btn" data-filter="active" aria-label="Show active tasks">Active</button>
+            <button class="filter-btn" data-filter="completed" aria-label="Show completed tasks">Completed</button>
+        </section>
+        <ul id="task-list" class="task-list" aria-live="polite"></ul>
+        <footer class="footer">
+            <span id="items-left">0 items left</span>
+        </footer>
+    </main>
+    <script src="script.js"></script>
 </body>
 </html>

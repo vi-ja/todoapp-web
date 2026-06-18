@@ -1,219 +1,270 @@
-(function(){
-  const STORAGE_KEY = 'todos:v1';
+(function () {
+  'use strict';
 
-  // State
-  let state = {
-    todos: [],
-    filter: 'all' // all | active | completed
+  const STORAGE_KEY = 'todoAppTasks';
+
+  const state = {
+    tasks: [],
+    filter: 'all',
   };
 
-  // Elements
-  const newTodoInput = document.getElementById('newTodoInput');
-  const addBtn = document.getElementById('addBtn');
-  const todoList = document.getElementById('todoList');
-  const filters = document.querySelectorAll('.filter');
-  const clearCompletedBtn = document.getElementById('clearCompleted');
-  const itemsLeft = document.getElementById('itemsLeft');
+  const newTaskInput = document.getElementById('new-task');
+  const addBtn = document.getElementById('add-btn');
+  const taskList = document.getElementById('task-list');
+  const filterSection = document.querySelector('.filters');
+  const itemsLeftEl = document.getElementById('items-left');
 
-  // Persistence
-  function load() {
+  function generateId() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  }
+
+  function loadTasks() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      state = raw ? JSON.parse(raw) : state;
-      if (!state.todos) state.todos = [];
-      if (!state.filter) state.filter = 'all';
-    } catch (e) {
-      console.error('Failed to load todos', e);
+      if (!raw) return;
+
+      const parsed = JSON.parse(raw);
+      state.tasks = Array.isArray(parsed.tasks) ? parsed.tasks : [];
+      state.filter = parsed.filter || 'all';
+    } catch (err) {
+      console.error('Failed to load tasks from localStorage', err);
+      state.tasks = [];
+      state.filter = 'all';
     }
   }
 
-  function save() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  function saveTasks() {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ tasks: state.tasks, filter: state.filter })
+    );
   }
 
-  // Helpers
-  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
-
-  function addTodo(title){
-    title = title && title.trim();
-    if (!title) return;
-    state.todos.unshift({ id: uid(), title, completed: false });
-    save();
-    render();
-  }
-
-  function updateTodo(id, patch){
-    const i = state.todos.findIndex(t => t.id === id);
-    if (i === -1) return;
-    state.todos[i] = Object.assign({}, state.todos[i], patch);
-    save();
-    render();
-  }
-
-  function deleteTodo(id){
-    state.todos = state.todos.filter(t => t.id !== id);
-    save();
-    render();
-  }
-
-  function clearCompleted(){
-    state.todos = state.todos.filter(t => !t.completed);
-    save();
-    render();
-  }
-
-  function setFilter(f){
-    state.filter = f;
-    save();
-    render();
-  }
-
-  function visibleTodos(){
-    if (state.filter === 'active') return state.todos.filter(t => !t.completed);
-    if (state.filter === 'completed') return state.todos.filter(t => t.completed);
-    return state.todos;
-  }
-
-  // Rendering
-  function render(){
-    // render list
-    const items = visibleTodos();
-    todoList.innerHTML = '';
-
-    for (const todo of items){
-      const li = document.createElement('li');
-      li.className = 'todo-item' + (todo.completed ? ' completed' : '');
-      li.dataset.id = todo.id;
-
-      const checkbox = document.createElement('input');
-      checkbox.type = 'checkbox';
-      checkbox.checked = !!todo.completed;
-      checkbox.className = 'toggle';
-      checkbox.setAttribute('aria-label', 'Toggle todo');
-
-      const title = document.createElement('div');
-      title.className = 'title';
-      title.textContent = todo.title;
-      title.tabIndex = 0;
-
-      const editBtn = document.createElement('button');
-      editBtn.className = 'edit-btn';
-      editBtn.title = 'Edit';
-      editBtn.textContent = '✎';
-
-      const delBtn = document.createElement('button');
-      delBtn.className = 'delete-btn';
-      delBtn.title = 'Delete';
-      delBtn.textContent = '✕';
-
-      li.appendChild(checkbox);
-      li.appendChild(title);
-      li.appendChild(editBtn);
-      li.appendChild(delBtn);
-
-      todoList.appendChild(li);
+  function getVisibleTasks() {
+    if (state.filter === 'active') {
+      return state.tasks.filter((task) => !task.completed);
     }
-
-    // update filters UI
-    filters.forEach(btn => btn.classList.toggle('active', btn.dataset.filter === state.filter));
-
-    // items left
-    const left = state.todos.filter(t => !t.completed).length;
-    itemsLeft.textContent = `${left} item${left !== 1 ? 's' : ''} left`;
+    if (state.filter === 'completed') {
+      return state.tasks.filter((task) => task.completed);
+    }
+    return state.tasks;
   }
 
-  // Event handling (delegation)
-  todoList.addEventListener('click', (e) => {
-    const li = e.target.closest('li');
-    if (!li) return;
-    const id = li.dataset.id;
+  function addTask(title) {
+    const trimmed = title.trim();
+    if (!trimmed) return;
 
-    if (e.target.matches('.toggle')){
-      updateTodo(id, { completed: e.target.checked });
+    state.tasks.unshift({
+      id: generateId(),
+      title: trimmed,
+      completed: false,
+      createdAt: Date.now(),
+    });
+
+    saveTasks();
+    render();
+  }
+
+  function toggleComplete(id) {
+    const task = state.tasks.find((t) => t.id === id);
+    if (!task) return;
+
+    task.completed = !task.completed;
+    saveTasks();
+    render();
+  }
+
+  function editTask(id, newTitle) {
+    const trimmed = newTitle.trim();
+    const task = state.tasks.find((t) => t.id === id);
+    if (!task) return;
+
+    if (!trimmed) {
+      deleteTask(id);
       return;
     }
 
-    if (e.target.matches('.delete-btn')){
-      deleteTodo(id);
-      return;
-    }
+    task.title = trimmed;
+    saveTasks();
+    render();
+  }
 
-    if (e.target.matches('.edit-btn')){
-      startEditing(li, id);
-      return;
-    }
-  });
+  function deleteTask(id) {
+    state.tasks = state.tasks.filter((t) => t.id !== id);
+    saveTasks();
+    render();
+  }
 
-  // double-click or Enter to edit title
-  todoList.addEventListener('dblclick', (e) => {
-    const li = e.target.closest('li');
-    if (!li) return;
-    const id = li.dataset.id;
-    startEditing(li, id);
-  });
+  function setFilter(filter) {
+    state.filter = filter;
+    saveTasks();
+    render();
+  }
 
-  function startEditing(li, id){
-    const todo = state.todos.find(t => t.id === id);
-    if (!todo) return;
+  function updateItemsLeft() {
+    const count = state.tasks.filter((t) => !t.completed).length;
+    itemsLeftEl.textContent = `${count} item${count === 1 ? '' : 's'} left`;
+  }
+
+  function updateFilterButtons() {
+    filterSection.querySelectorAll('.filter-btn').forEach((btn) => {
+      btn.classList.toggle('active', btn.dataset.filter === state.filter);
+    });
+  }
+
+  function createTaskElement(task) {
+    const li = document.createElement('li');
+    li.className = 'task-item' + (task.completed ? ' completed' : '');
+    li.dataset.id = task.id;
+
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.className = 'task-toggle';
+    checkbox.checked = task.completed;
+    checkbox.setAttribute('aria-label', `Mark "${task.title}" as ${task.completed ? 'incomplete' : 'complete'}`);
+
+    const title = document.createElement('span');
+    title.className = 'task-title';
+    title.textContent = task.title;
+
+    const editBtn = document.createElement('button');
+    editBtn.type = 'button';
+    editBtn.className = 'task-edit';
+    editBtn.setAttribute('aria-label', `Edit "${task.title}"`);
+    editBtn.textContent = 'Edit';
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.type = 'button';
+    deleteBtn.className = 'task-delete';
+    deleteBtn.setAttribute('aria-label', `Delete "${task.title}"`);
+    deleteBtn.textContent = 'Delete';
+
+    li.append(checkbox, title, editBtn, deleteBtn);
+    return li;
+  }
+
+  function startEditing(li, id) {
+    const task = state.tasks.find((t) => t.id === id);
+    if (!task) return;
 
     li.innerHTML = '';
-    li.classList.remove('completed');
+    li.classList.add('editing');
 
     const input = document.createElement('input');
-    input.className = 'edit';
-    input.value = todo.title;
+    input.type = 'text';
+    input.className = 'task-edit-input';
+    input.value = task.title;
+    input.setAttribute('aria-label', 'Edit task title');
 
     const saveBtn = document.createElement('button');
+    saveBtn.type = 'button';
+    saveBtn.className = 'task-save';
     saveBtn.textContent = 'Save';
-    saveBtn.className = 'save-btn';
 
     const cancelBtn = document.createElement('button');
+    cancelBtn.type = 'button';
+    cancelBtn.className = 'task-cancel';
     cancelBtn.textContent = 'Cancel';
-    cancelBtn.className = 'cancel-btn';
 
-    li.appendChild(input);
-    li.appendChild(saveBtn);
-    li.appendChild(cancelBtn);
-
+    li.append(input, saveBtn, cancelBtn);
     input.focus();
+    input.select();
 
-    function commit(){
-      const v = input.value.trim();
-      if (!v) {
-        deleteTodo(id);
-      } else {
-        updateTodo(id, { title: v });
-      }
+    function commit() {
+      editTask(id, input.value);
+    }
+
+    function cancel() {
+      render();
     }
 
     saveBtn.addEventListener('click', commit);
-    cancelBtn.addEventListener('click', () => render());
+    cancelBtn.addEventListener('click', cancel);
 
-    input.addEventListener('keydown', (ev) => {
-      if (ev.key === 'Enter') commit();
-      if (ev.key === 'Escape') render();
-    });
-
-    input.addEventListener('blur', () => {
-      // small timeout to allow click on save/cancel
-      setTimeout(() => { if (document.activeElement !== saveBtn && document.activeElement !== cancelBtn) commit(); }, 150);
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') commit();
+      if (e.key === 'Escape') cancel();
     });
   }
 
-  // Add new
-  addBtn.addEventListener('click', () => { addTodo(newTodoInput.value); newTodoInput.value = ''; newTodoInput.focus(); });
+  function renderTasks() {
+    const visible = getVisibleTasks();
+    taskList.innerHTML = '';
 
-  newTodoInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { addTodo(newTodoInput.value); newTodoInput.value = ''; } });
+    if (visible.length === 0) {
+      const empty = document.createElement('li');
+      empty.className = 'task-empty';
+      empty.textContent =
+        state.filter === 'completed'
+          ? 'No completed tasks yet.'
+          : state.filter === 'active'
+            ? 'All tasks completed!'
+            : 'No tasks yet. Add one above.';
+      taskList.appendChild(empty);
+      return;
+    }
 
-  // Filters
-  document.querySelector('.filters').addEventListener('click', (e) => {
-    if (!e.target.matches('.filter')) return;
-    setFilter(e.target.dataset.filter);
+    visible.forEach((task) => {
+      taskList.appendChild(createTaskElement(task));
+    });
+  }
+
+  function render() {
+    renderTasks();
+    updateFilterButtons();
+    updateItemsLeft();
+  }
+
+  taskList.addEventListener('click', (e) => {
+    const li = e.target.closest('.task-item');
+    if (!li) return;
+
+    const id = li.dataset.id;
+
+    if (e.target.matches('.task-toggle')) {
+      toggleComplete(id);
+      return;
+    }
+
+    if (e.target.matches('.task-delete')) {
+      deleteTask(id);
+      return;
+    }
+
+    if (e.target.matches('.task-edit')) {
+      startEditing(li, id);
+    }
   });
 
-  clearCompletedBtn.addEventListener('click', clearCompleted);
+  taskList.addEventListener('dblclick', (e) => {
+    const title = e.target.closest('.task-title');
+    if (!title) return;
 
-  // Initialize
-  load();
+    const li = title.closest('.task-item');
+    if (!li) return;
+
+    startEditing(li, li.dataset.id);
+  });
+
+  addBtn.addEventListener('click', () => {
+    addTask(newTaskInput.value);
+    newTaskInput.value = '';
+    newTaskInput.focus();
+  });
+
+  newTaskInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      addTask(newTaskInput.value);
+      newTaskInput.value = '';
+    }
+  });
+
+  filterSection.addEventListener('click', (e) => {
+    const btn = e.target.closest('.filter-btn');
+    if (!btn) return;
+    setFilter(btn.dataset.filter);
+  });
+
+  loadTasks();
   render();
 })();
